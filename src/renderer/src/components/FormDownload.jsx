@@ -4,10 +4,11 @@ const { TextArea } = Input
 
 window.ipcRenderer = ipcRenderer
 const FormDownload = () => {
-  const startDownload = (e) => {
+  const startDownload = async (e) => {
     e.preventDefault()
-    const formValues = form.validateFields()
-    const urls = formValues.linkUrls
+    const formValues = await form.validateFields()
+    console.log(`[debug - formValues]: `, formValues)
+    const urls = formValues?.linkUrls?.split('\n')
     const directory = formValues.directory
     ipcRenderer.send('download', { urls, directory })
   }
