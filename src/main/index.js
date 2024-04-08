@@ -8,8 +8,8 @@ const downloader = new Downloader()
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 700,
-    height: 800,
+    width: 800,
+    height: 1000,
     show: false,
     resizable: false,
     autoHideMenuBar: true,
@@ -77,4 +77,18 @@ app.on('window-all-closed', () => {
 ipcMain.on('download', async (event, { urls, directory }) => {
   // Download file to tmp folder
   downloader.downloadVideos(urls, directory)
+
+  // Catch and handle any errors that come back from the downloader
+  downloader.on('error', (error) => {
+    event.reply('download:error', error)
+  })
+
+  // Get download progress
+  downloader.on('progress', (percentage) => {
+    event.reply('download:progress', percentage)
+  })
+
+  downloader.on('finish', async () => {
+    event.reply('download:success')
+  })
 })

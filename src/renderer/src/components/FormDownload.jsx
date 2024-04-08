@@ -1,19 +1,92 @@
-import { Button, Form, Input, Radio } from 'antd'
+import { Button, Form, Input, Progress, Radio, Table, message } from 'antd'
+import { cloneDeep } from 'lodash'
+import { useEffect, useState } from 'react'
 const { ipcRenderer } = window.require('electron')
 const { TextArea } = Input
 
 window.ipcRenderer = ipcRenderer
 const FormDownload = () => {
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState([])
+
   const startDownload = async (e) => {
     e.preventDefault()
     const formValues = await form.validateFields()
-    console.log(`[debug - formValues]: `, formValues)
     const urls = formValues?.linkUrls?.split('\n')
+    setData(
+      urls.map((i) => {
+        return {
+          video: i,
+          percentage: 0
+        }
+      })
+    )
     const directory = formValues.directory
     ipcRenderer.send('download', { urls, directory })
   }
   const [form] = Form.useForm()
   const type = Form.useWatch('type', form)
+
+  useEffect(() => {
+    ipcRenderer.on('download:progress', (event, { percentage, videoURL }) => {
+      setLoading(true)
+      if (data.length) {
+        const dataClone = cloneDeep(data)
+        const result = dataClone.find((i) => i.video === videoURL)
+        result.percentage = Math.round(percentage)
+        setData(dataClone)
+      }
+    })
+
+    ipcRenderer.on('download:success', () => {
+      setLoading(false)
+    })
+
+    ipcRenderer.on('download:error', (event, error) => {
+      message.error(error)
+      setLoading(false)
+    })
+  }, [data])
+
+  const columns = [
+    {
+      title: 'STT',
+      width: 40,
+      dataIndex: 'stt',
+      key: 'stt',
+      render: (text, record, index) => {
+        return <span>{index + 1}</span>
+      }
+    },
+    {
+      title: 'Video',
+      dataIndex: 'video',
+      key: 'video',
+      width: 750,
+      render: (text, record) => {
+        return (
+          <span
+            style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {record.video}
+          </span>
+        )
+      }
+    },
+    {
+      title: '%',
+      width: 100,
+      dataIndex: 'percentage',
+      key: 'percentage',
+      render: (text, record) => {
+        return <Progress size={'small'} percent={record?.percentage || 0} />
+      }
+    }
+  ]
+
   return (
     <div
       style={{
@@ -27,6 +100,7 @@ const FormDownload = () => {
         labelCol={{
           span: 4
         }}
+        disabled={loading}
         wrapperCol={{
           span: 20
         }}
@@ -62,9 +136,18 @@ const FormDownload = () => {
           </Form.Item>
         ) : null}
 
-        <Button type="primary" style={{ minWidth: 200 }} onClick={startDownload}>
+        <Button loading={loading} type="primary" style={{ minWidth: 200 }} onClick={startDownload}>
           Tải
         </Button>
+
+        <h2
+          style={{
+            textAlign: 'center'
+          }}
+        >
+          Logs
+        </h2>
+        <Table size="small" columns={columns} dataSource={data} pagination={false}></Table>
       </Form>
     </div>
   )

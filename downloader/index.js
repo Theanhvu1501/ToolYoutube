@@ -6,12 +6,53 @@ const { last } = require('lodash')
 const { default: axios } = require('axios')
 const EventEmitter = require('events')
 // Array of YouTube video URLs
-const videoURLs = ['https://www.youtube.com/watch?v=fr5-33--zPk']
+const { throttle } = require('throttle-debounce')
 class Downloader extends EventEmitter {
   constructor() {
     super()
+    this._throttleValue = 100
   }
-  async downloadVideo(videoURL, directory) {
+
+  validateURL = (url) => {
+    let isValid
+
+    try {
+      isValid = ytdl.validateURL(url)
+    } catch (error) {
+      return this.handleError(error)
+    }
+
+    // Throw error if the video URL is invalid
+    if (!isValid) {
+      // We use nextTick so the .on() calls can be async
+      process.nextTick(() => {
+        this.emit('error', new Error('Invalid URL'))
+        this.removeAllListeners()
+      })
+    }
+
+    return isValid
+  }
+
+  handleProgress = (_, downloaded, total, videoURL) => {
+    const percentage = (downloaded / total) * 100
+    this.emit('progress', { percentage, videoURL })
+  }
+
+  handleError = () => {
+    this.emit('error', new Error("Can't process video."))
+  }
+
+  handleFinish = ({ title }) => {
+    setTimeout(() => {
+      this.emit('finish', {
+        videoTitle: title
+      })
+    }, this._throttleValue)
+  }
+
+  downloadVideo = async (videoURL, directory) => {
+    if (!this.validateURL(videoURL)) return
     try {
       const info = await ytdl.getInfo(videoURL)
       const title = info.videoDetails.title
@@ -22,8 +63,16 @@ class Downloader extends EventEmitter {
         //Download video
         const format = formatsWithAudio720p[0]
         const video = ytdl(videoURL, { format: format })
-        video.pipe(fs.createWriteStream(`${directory}/Video/${title}.mp4`)) // Save video as .mp4 file
-        video.on('end', () => console.log(`Downloaded video with sound: ${title}`)) // Log when download is complete
+        video
+          .on('error', this.handleError)
+          .on(
+            'progress',
+            throttle(this._throttleValue, (_, downloaded, total) =>
+              this.handleProgress(_, downloaded, total, videoURL)
+            )
+          )
+          .pipe(fs.createWriteStream(`${directory}/Video/${title}.mp4`))
+          .on('finish', () => this.handleFinish({ title })) // Log when download is complete
 
         //Download thumb
         const thumbnailURL = last(info.videoDetails.thumbnails).url
@@ -41,7 +90,7 @@ class Downloader extends EventEmitter {
   }
 
   // Function to download multiple videos
-  async downloadVideos(urls, directory) {
+  downloadVideos = async (urls, directory) => {
     await Promise.all(
       urls.map((v) => {
         this.downloadVideo(v, directory)
