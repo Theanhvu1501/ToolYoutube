@@ -54,6 +54,17 @@ class Downloader extends EventEmitter {
   downloadVideo = async (videoURL, directory) => {
     if (!this.validateURL(videoURL)) return
     try {
+      if (!fs.existsSync(`${directory}/Video`)) {
+        fs.mkdirSync(`${directory}/Video`, {
+          recursive: true
+        })
+      }
+      if (!fs.existsSync(`${directory}/Thumb`)) {
+        fs.mkdirSync(`${directory}/Thumb`, {
+          recursive: true
+        })
+      }
+
       const info = await ytdl.getInfo(videoURL)
       const title = info.videoDetails.title
       const formatsWithAudio720p = info.formats.filter(
