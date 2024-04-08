@@ -11,7 +11,7 @@ class Downloader extends EventEmitter {
   constructor() {
     super()
   }
-  async downloadVideo(videoURL) {
+  async downloadVideo(videoURL, directory) {
     try {
       const info = await ytdl.getInfo(videoURL)
       const title = info.videoDetails.title
@@ -22,7 +22,7 @@ class Downloader extends EventEmitter {
         //Download video
         const format = formatsWithAudio720p[0]
         const video = ytdl(videoURL, { format: format })
-        video.pipe(fs.createWriteStream(`${title}.mp4`)) // Save video as .mp4 file
+        video.pipe(fs.createWriteStream(`${directory}\\Video\\${title}.mp4`)) // Save video as .mp4 file
         video.on('end', () => console.log(`Downloaded video with sound: ${title}`)) // Log when download is complete
 
         //Download thumb
@@ -31,8 +31,7 @@ class Downloader extends EventEmitter {
           responseType: 'stream'
         })
         const thumbnailFileName = `${title}.jpg`
-        response.data.pipe(fs.createWriteStream(thumbnailFileName)) // Save thumbnail as .jpg file
-        console.log(`Downloaded thumbnail: ${thumbnailFileName}`)
+        response.data.pipe(fs.createWriteStream(`${directory}\\Thumb\\${thumbnailFileName}`)) // Save thumbnail as .jpg file
       } else {
         console.error(`Video format not found for ${title}`)
       }
@@ -42,10 +41,10 @@ class Downloader extends EventEmitter {
   }
 
   // Function to download multiple videos
-  async downloadVideos() {
+  async downloadVideos(urls, directory) {
     await Promise.all(
-      videoURLs.map((v) => {
-        this.downloadVideo(v)
+      urls.map((v) => {
+        this.downloadVideo(v, directory)
       })
     )
   }

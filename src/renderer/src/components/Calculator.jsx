@@ -1,114 +1,72 @@
-import { useEffect, useState } from 'react'
+import { Button, Form, Input, Radio } from 'antd'
 const { ipcRenderer } = window.require('electron')
-let allowedValues = [
-  '0',
-  '1',
-  '2',
-  '3',
-  '4',
-  '5',
-  '6',
-  '7',
-  '8',
-  '9',
-  '+',
-  '-',
-  '/',
-  '*',
-  '=',
-  '.',
-  'C',
-  'Enter',
-  'Backspace',
-  'Delete'
-]
-window.ipcRenderer = ipcRenderer
-const Calculator = () => {
-  const [expression, setExpression] = useState('')
+const { TextArea } = Input
 
+window.ipcRenderer = ipcRenderer
+const FormDownload = () => {
   const startDownload = (e) => {
     e.preventDefault()
-
-    ipcRenderer.send('download')
+    const formValues = form.validateFields()
+    const urls = formValues.linkUrls
+    const directory = formValues.directory
+    ipcRenderer.send('download', { urls, directory })
   }
-
-  let calculateExpression = (value) => {
-    if (value === 'C') {
-      setExpression('')
-    } else if (value === '=' || value === 'Enter') {
-      setExpression((expression) => `${eval(expression)}`)
-    } else if (value === 'Backspace' || value === 'Delete') {
-      setExpression((expression) => expression.substring(0, expression.length - 1))
-    } else {
-      setExpression((expression) => expression + value)
-    }
-  }
-
-  let handleButtonClick = (e) => {
-    let value = e.target.dataset.value
-    if (value) {
-      calculateExpression(value)
-    }
-  }
-
-  let handleKeyDown = (e) => {
-    let value = e.key
-    if (value === 'Enter') {
-      e.preventDefault()
-    }
-    if (allowedValues.includes(value)) {
-      calculateExpression(value)
-    }
-  }
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
-
+  const [form] = Form.useForm()
+  const type = Form.useWatch('type', form)
   return (
-    <div className="container" onClick={handleButtonClick}>
-      <div className="result-container">
-        <span className="result">{expression}</span>
-      </div>
-      <div className="row">
-        <button data-value="C">C</button>
-        <button data-value="%">%</button>
-        <button data-value="Backspace">&#x021D0;</button>
-        <button data-value="/">/</button>
-      </div>
-      <div className="row">
-        <button data-value="7">7</button>
-        <button data-value="8">8</button>
-        <button data-value="9">9</button>
-        <button data-value="*">*</button>
-      </div>
-      <div className="row">
-        <button data-value="4">4</button>
-        <button data-value="5">5</button>
-        <button data-value="6">6</button>
-        <button data-value="+">+</button>
-      </div>
-      <div className="row">
-        <button data-value="1">1</button>
-        <button data-value="2">2</button>
-        <button data-value="3">3</button>
-        <button data-value="-">-</button>
-      </div>
-      <div className="row">
-        <button data-value="**">**</button>
-        <button data-value="0">0</button>
-        <button data-value=".">.</button>
-        <button data-value="=">=</button>
-      </div>
-      <div className="row">
-        <button onClick={startDownload}> Start download</button>
-      </div>
+    <div
+      style={{
+        marginTop: 40,
+        padding: 20
+      }}
+    >
+      <Form
+        hideRequiredMark
+        form={form}
+        labelCol={{
+          span: 4
+        }}
+        wrapperCol={{
+          span: 20
+        }}
+      >
+        <Form.Item
+          label="Thư mục lưu"
+          name="directory"
+          rules={[
+            {
+              required: true
+            }
+          ]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item name={'type'} label="Loại" initialValue={'LinkUrls'}>
+          <Radio.Group>
+            <Radio value="LinkUrls"> LinkUrls </Radio>
+            <Radio value="PlayList"> PlayList </Radio>
+          </Radio.Group>
+        </Form.Item>
+        {type === 'LinkUrls' ? (
+          <Form.Item
+            label="LinkUrls"
+            name="linkUrls"
+            rules={[
+              {
+                required: true
+              }
+            ]}
+          >
+            <TextArea rows={8} />
+          </Form.Item>
+        ) : null}
+
+        <Button type="primary" style={{ minWidth: 200 }} onClick={startDownload}>
+          Tải
+        </Button>
+      </Form>
     </div>
   )
 }
 
-export default Calculator
+export default FormDownload

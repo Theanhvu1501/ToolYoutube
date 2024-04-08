@@ -1,5 +1,5 @@
 {
-  "name": "calculator-react",
+  "name": "ToolYoutube",
   "version": "1.0.0",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
@@ -19,6 +19,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
+    "antd": "^5.16.1",
     "axios": "^1.6.8",
     "lodash": "^4.17.21",
     "ytdl-core": "^4.11.5"

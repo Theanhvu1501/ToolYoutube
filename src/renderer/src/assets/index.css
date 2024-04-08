@@ -3,6 +3,9 @@
   margin: 0;
   box-sizing: border-box;
 }
+.ant-form-item-label {
+  text-align: left !important;
+}
 
 html,
 body,
