@@ -2,7 +2,7 @@
 
 const ytdl = require('ytdl-core')
 const fs = require('fs')
-const { last } = require('lodash')
+const { last, chunk } = require('lodash')
 const { default: axios } = require('axios')
 const EventEmitter = require('events')
 // Array of YouTube video URLs
@@ -91,11 +91,14 @@ class Downloader extends EventEmitter {
 
   // Function to download multiple videos
   downloadVideos = async (urls, directory) => {
-    await Promise.all(
-      urls.map((v) => {
-        this.downloadVideo(v, directory)
-      })
-    )
+    const dataChunk = chunk(urls, 10)
+    dataChunk.forEach(async (d) => {
+      await Promise.all(
+        d.map((v) => {
+          this.downloadVideo(v, directory)
+        })
+      )
+    })
   }
 }
 

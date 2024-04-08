@@ -1,9 +1,8 @@
 import { Button, Form, Input, Progress, Radio, Table, message } from 'antd'
-import { cloneDeep } from 'lodash'
 import { useEffect, useState } from 'react'
 const { ipcRenderer } = window.require('electron')
 const { TextArea } = Input
-
+let dataMap = {}
 window.ipcRenderer = ipcRenderer
 const FormDownload = () => {
   const [loading, setLoading] = useState(false)
@@ -30,12 +29,15 @@ const FormDownload = () => {
   useEffect(() => {
     ipcRenderer.on('download:progress', (event, { percentage, videoURL }) => {
       setLoading(true)
-      if (data.length) {
-        const dataClone = cloneDeep(data)
-        const result = dataClone.find((i) => i.video === videoURL)
-        result.percentage = Math.round(percentage)
-        setData(dataClone)
+      if (dataMap.hasOwnProperty(videoURL)) {
+        // Nếu đã tồn tại, cập nhật phần trăm
+        dataMap[videoURL].percentage = Math.round(percentage)
+      } else {
+        // Nếu chưa tồn tại, thêm một mục mới vào dataMap
+        dataMap[videoURL] = { video: videoURL, percentage: Math.round(percentage) }
       }
+      const updatedData = Object.values(dataMap)
+      setData(updatedData)
     })
 
     ipcRenderer.on('download:success', () => {
@@ -51,9 +53,10 @@ const FormDownload = () => {
   const columns = [
     {
       title: 'STT',
-      width: 40,
+      width: 60,
       dataIndex: 'stt',
       key: 'stt',
+
       render: (text, record, index) => {
         return <span>{index + 1}</span>
       }
@@ -62,7 +65,6 @@ const FormDownload = () => {
       title: 'Video',
       dataIndex: 'video',
       key: 'video',
-      width: 750,
       render: (text, record) => {
         return (
           <span
@@ -78,7 +80,7 @@ const FormDownload = () => {
     },
     {
       title: '%',
-      width: 100,
+      width: 80,
       dataIndex: 'percentage',
       key: 'percentage',
       render: (text, record) => {
@@ -147,7 +149,13 @@ const FormDownload = () => {
         >
           Logs
         </h2>
-        <Table size="small" columns={columns} dataSource={data} pagination={false}></Table>
+        <Table
+          size="small"
+          columns={columns}
+          dataSource={data}
+          pagination={false}
+          scroll={{ y: 500 }}
+        ></Table>
       </Form>
     </div>
   )
