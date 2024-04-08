@@ -1,7 +1,7 @@
-import Calculator from './components/Calculator'
+import FormDownload from './components/FormDownload'
 
 function App() {
-  return <Calculator />
+  return <FormDownload />
 }
 
 export default App
