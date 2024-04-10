@@ -100,16 +100,15 @@ class Downloader extends EventEmitter {
     }
   }
 
-  // Function to download multiple videos
   downloadVideos = async (urls, directory) => {
-    const dataChunk = chunk(urls, 10)
-    dataChunk.forEach(async (d) => {
+    const dataChunk = chunk(urls, 20)
+    for (const d of dataChunk) {
       await Promise.all(
         d.map((v) => {
-          this.downloadVideo(v, directory)
+          return this.downloadVideo(v, directory)
         })
       )
-    })
+    }
   }
 }
 

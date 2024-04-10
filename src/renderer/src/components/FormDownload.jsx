@@ -1,5 +1,5 @@
 import { Button, Form, Input, Progress, Radio, Table, message } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 const { ipcRenderer } = window.require('electron')
 const { TextArea } = Input
 let dataMap = {}
@@ -7,6 +7,7 @@ window.ipcRenderer = ipcRenderer
 const FormDownload = () => {
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState([])
+  const dataRef = useRef(data)
 
   const startDownload = async (e) => {
     e.preventDefault()
@@ -27,17 +28,21 @@ const FormDownload = () => {
   const type = Form.useWatch('type', form)
 
   useEffect(() => {
+    const updateData = () => {
+      dataRef.current = Object.values(dataMap)
+      setData(dataRef.current)
+    }
+
     ipcRenderer.on('download:progress', (event, { percentage, videoURL }) => {
       setLoading(true)
-      if (dataMap.hasOwnProperty(videoURL)) {
+      if (dataMap?.videoURL) {
         // Nếu đã tồn tại, cập nhật phần trăm
         dataMap[videoURL].percentage = Math.round(percentage)
       } else {
         // Nếu chưa tồn tại, thêm một mục mới vào dataMap
         dataMap[videoURL] = { video: videoURL, percentage: Math.round(percentage) }
       }
-      const updatedData = Object.values(dataMap)
-      setData(updatedData)
+      updateData()
     })
 
     ipcRenderer.on('download:success', () => {
@@ -48,7 +53,13 @@ const FormDownload = () => {
       message.error(error)
       setLoading(false)
     })
-  }, [data])
+
+    return () => {
+      ipcRenderer.removeAllListeners('download:progress')
+      ipcRenderer.removeAllListeners('download:success')
+      ipcRenderer.removeAllListeners('download:error')
+    }
+  }, [])
 
   const columns = [
     {
