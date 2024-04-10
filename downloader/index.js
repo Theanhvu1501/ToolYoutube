@@ -79,7 +79,7 @@ class Downloader extends EventEmitter {
           .on(
             'progress',
             throttle(this._throttleValue, (_, downloaded, total) =>
-              this.handleProgress(_, downloaded, total, videoURL)
+              this.handleProgress(_, downloaded, total, title)
             )
           )
           .pipe(fs.createWriteStream(`${directory}/Video/${title}.mp4`))

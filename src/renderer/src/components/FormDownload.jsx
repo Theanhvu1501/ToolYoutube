@@ -11,6 +11,8 @@ const FormDownload = () => {
 
   const startDownload = async (e) => {
     e.preventDefault()
+    setLoading(true)
+    dataMap = {}
     const formValues = await form.validateFields()
     const urls = formValues?.linkUrls?.split('\n')
     const directory = formValues.directory
