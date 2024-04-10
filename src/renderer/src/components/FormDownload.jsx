@@ -13,14 +13,6 @@ const FormDownload = () => {
     e.preventDefault()
     const formValues = await form.validateFields()
     const urls = formValues?.linkUrls?.split('\n')
-    setData(
-      urls.map((i) => {
-        return {
-          video: i,
-          percentage: 0
-        }
-      })
-    )
     const directory = formValues.directory
     ipcRenderer.send('download', { urls, directory })
   }
