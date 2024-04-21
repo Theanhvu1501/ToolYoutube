@@ -7,6 +7,22 @@
   text-align: left !important;
 }
 
+.ant-btn,
+.ant-input,
+.ant-input-number,
+.ant-select,
+.ant-radio,
+.ant-checkbox,
+.ant-switch,
+.ant-tabs-tab,
+.ant-tabs-tab-btn,
+.ant-tag,
+.ant-card,
+.ant-modal-content,
+.ant-modal-header,
+.ant-modal-footer {
+  border-radius: 0 !important;
+}
 html,
 body,
 #root {

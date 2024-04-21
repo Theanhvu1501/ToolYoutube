@@ -8,8 +8,8 @@ const downloader = new Downloader()
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 1000,
+    width: 1000,
+    height: 850,
     show: false,
     resizable: false,
     autoHideMenuBar: true,

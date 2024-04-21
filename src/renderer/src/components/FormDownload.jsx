@@ -1,4 +1,5 @@
-import { Button, Form, Input, Progress, Radio, Table, message } from 'antd'
+import { ClockCircleOutlined, LinkOutlined } from '@ant-design/icons'
+import { Button, Divider, Form, Input, List, Progress, message } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 const { ipcRenderer } = window.require('electron')
 const { TextArea } = Input
@@ -19,7 +20,6 @@ const FormDownload = () => {
     ipcRenderer.send('download', { urls, directory })
   }
   const [form] = Form.useForm()
-  const type = Form.useWatch('type', form)
 
   useEffect(() => {
     const updateData = () => {
@@ -27,17 +27,29 @@ const FormDownload = () => {
       setData(dataRef.current)
     }
 
-    ipcRenderer.on('download:progress', (event, { percentage, videoURL }) => {
-      setLoading(true)
-      if (dataMap?.videoURL) {
-        // Nếu đã tồn tại, cập nhật phần trăm
-        dataMap[videoURL].percentage = Math.round(percentage)
-      } else {
-        // Nếu chưa tồn tại, thêm một mục mới vào dataMap
-        dataMap[videoURL] = { video: videoURL, percentage: Math.round(percentage) }
+    ipcRenderer.on(
+      'download:progress',
+      (event, { percentage, title, videoURL, lengthSeconds, thumbnailURL }) => {
+        setLoading(true)
+        if (dataMap?.videoURL) {
+          // Nếu đã tồn tại, cập nhật phần trăm
+          dataMap[videoURL].percentage = Math.round(percentage)
+        } else {
+          const hours = Math.floor(lengthSeconds / 3600) // Số giờ
+          const minutes = Math.floor((lengthSeconds % 3600) / 60) // Số phút
+          const remainingSeconds = lengthSeconds % 60 // Số giây còn lại
+
+          dataMap[videoURL] = {
+            video: videoURL,
+            percentage: Math.round(percentage),
+            title,
+            thumbnailURL,
+            time: `${hours}:${minutes}:${remainingSeconds}`
+          }
+        }
+        updateData()
       }
-      updateData()
-    })
+    )
 
     ipcRenderer.on('download:success', () => {
       setLoading(false)
@@ -55,83 +67,106 @@ const FormDownload = () => {
     }
   }, [])
 
-  const columns = [
-    {
-      title: 'STT',
-      width: 60,
-      dataIndex: 'stt',
-      key: 'stt',
-
-      render: (text, record, index) => {
-        return <span>{index + 1}</span>
-      }
-    },
-    {
-      title: 'Video',
-      dataIndex: 'video',
-      key: 'video',
-      render: (text, record) => {
-        return (
-          <span
-            style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            {record.video}
-          </span>
-        )
-      }
-    },
-    {
-      title: '%',
-      width: 80,
-      dataIndex: 'percentage',
-      key: 'percentage',
-      render: (text, record) => {
-        return <Progress size={'small'} percent={record?.percentage || 0} />
-      }
-    }
-  ]
-
   return (
     <div
       style={{
-        marginTop: 40,
-        padding: 20
+        paddingTop: 35
       }}
     >
       <Form
         hideRequiredMark
         form={form}
         labelCol={{
-          span: 4
+          span: 3
         }}
         disabled={loading}
         wrapperCol={{
-          span: 20
+          span: 21
         }}
       >
-        <Form.Item
-          label="Thư mục lưu"
-          name="directory"
-          rules={[
-            {
-              required: true
-            }
-          ]}
+        <div
+          style={{
+            height: 400,
+            padding: '16px'
+          }}
         >
-          <Input />
-        </Form.Item>
-        <Form.Item name={'type'} label="Loại" initialValue={'LinkUrls'}>
-          <Radio.Group>
-            <Radio value="LinkUrls"> LinkUrls </Radio>
-            <Radio value="PlayList"> PlayList </Radio>
-          </Radio.Group>
-        </Form.Item>
-        {type === 'LinkUrls' ? (
+          <List
+            itemLayout="horizontal"
+            dataSource={data}
+            style={{
+              height: 385,
+              overflow: 'scroll'
+            }}
+            renderItem={(item) => (
+              <List.Item>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingLeft: 10,
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{ marginRight: 10 }}>
+                    <img
+                      src={item.thumbnailURL}
+                      style={{ width: 150, height: 80, objectFit: 'cover' }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      alignItems: 'start'
+                    }}
+                  >
+                    <div
+                      style={{
+                        whiteSpace: 'nowrap',
+                        width: 750,
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {item.title}
+                    </div>
+
+                    <div
+                      style={{
+                        color: '#C5C3C1',
+                        marginTop: 10,
+                        marginBottom: 7,
+                        paddingLeft: 20,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <ClockCircleOutlined style={{ verticalAlign: 'middle' }} />
+                      <span style={{ marginLeft: 8, marginRight: 20 }}>{item.time}</span>
+                      <LinkOutlined style={{ verticalAlign: 'middle' }} />
+                      <span style={{ marginLeft: 8 }}>
+                        <a>{item.video}</a>
+                      </span>
+                    </div>
+                    <Progress
+                      size={'small'}
+                      style={{ paddingLeft: 20 }}
+                      percent={item?.percentage || 0}
+                    />
+                  </div>
+                </div>
+              </List.Item>
+            )}
+          />
+        </div>
+        <div
+          style={{
+            backgroundColor: '#F0F0F0',
+            padding: 30
+          }}
+        >
           <Form.Item
-            label="LinkUrls"
+            label="Link videos"
             name="linkUrls"
             rules={[
               {
@@ -141,26 +176,34 @@ const FormDownload = () => {
           >
             <TextArea rows={8} />
           </Form.Item>
-        ) : null}
-
-        <Button loading={loading} type="primary" style={{ minWidth: 200 }} onClick={startDownload}>
-          Tải
-        </Button>
-
-        <h2
-          style={{
-            textAlign: 'center'
-          }}
-        >
-          Logs
-        </h2>
-        <Table
-          size="small"
-          columns={columns}
-          dataSource={data}
-          pagination={false}
-          scroll={{ y: 500 }}
-        ></Table>
+          <Divider />
+          <Form.Item
+            label="Choose"
+            name="directory"
+            rules={[
+              {
+                required: true
+              }
+            ]}
+          >
+            <Input />
+          </Form.Item>
+          <div
+            style={{
+              marginTop: 20,
+              textAlign: 'right'
+            }}
+          >
+            <Button
+              loading={loading}
+              type="primary"
+              style={{ minWidth: 200 }}
+              onClick={startDownload}
+            >
+              Download videos
+            </Button>
+          </div>
+        </div>
       </Form>
     </div>
   )

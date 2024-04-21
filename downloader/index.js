@@ -34,9 +34,9 @@ class Downloader extends EventEmitter {
     return isValid
   }
 
-  handleProgress = (_, downloaded, total, videoURL) => {
+  handleProgress = (_, downloaded, total, title, videoURL, lengthSeconds, thumbnailURL) => {
     const percentage = (downloaded / total) * 100
-    this.emit('progress', { percentage, videoURL })
+    this.emit('progress', { percentage, title, videoURL, lengthSeconds, thumbnailURL })
   }
 
   handleError = () => {
@@ -66,7 +66,8 @@ class Downloader extends EventEmitter {
       }
 
       const info = await ytdl.getInfo(videoURL)
-      const title = info.videoDetails.title
+      const { title, lengthSeconds } = info.videoDetails
+      const thumbnailURL = last(info.videoDetails.thumbnails).url
       const formatsWithAudio720p = info.formats.filter(
         (format) => format.hasAudio && format.hasVideo && format.quality === 'hd720'
       )
@@ -79,14 +80,22 @@ class Downloader extends EventEmitter {
           .on(
             'progress',
             throttle(this._throttleValue, (_, downloaded, total) =>
-              this.handleProgress(_, downloaded, total, title)
+              this.handleProgress(
+                _,
+                downloaded,
+                total,
+                title,
+                videoURL,
+                lengthSeconds,
+                thumbnailURL
+              )
             )
           )
           .pipe(fs.createWriteStream(`${directory}/Video/${title}.mp4`))
           .on('finish', () => this.handleFinish({ title })) // Log when download is complete
 
         //Download thumb
-        const thumbnailURL = last(info.videoDetails.thumbnails).url
+
         const response = await axios.get(thumbnailURL, {
           responseType: 'stream'
         })
