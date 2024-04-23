@@ -2,6 +2,7 @@
 
 const ytdl = require('ytdl-core')
 const fs = require('fs')
+const path = require('path')
 const { last, chunk } = require('lodash')
 const { default: axios } = require('axios')
 const EventEmitter = require('events')
@@ -71,6 +72,10 @@ class Downloader extends EventEmitter {
       const formatsWithAudio720p = info.formats.filter(
         (format) => format.hasAudio && format.hasVideo && format.quality === 'hd720'
       )
+      const filePathVideo = path.join(`${directory}/Video`, `${title}.mp4`)
+      const filePathThumb = path.join(`${directory}/Thumb`, `${title}.jpg`)
+      console.log(`[debug - filePathVideo]: `, filePathVideo)
+      console.log(`[debug - filePathThumb]: `, filePathThumb)
       if (formatsWithAudio720p.length > 0) {
         //Download video
         const format = formatsWithAudio720p[0]
@@ -91,7 +96,7 @@ class Downloader extends EventEmitter {
               )
             )
           )
-          .pipe(fs.createWriteStream(`${directory}/Video/${title}.mp4`))
+          .pipe(fs.createWriteStream(filePathVideo))
           .on('finish', () => this.handleFinish({ title })) // Log when download is complete
 
         //Download thumb
@@ -99,8 +104,7 @@ class Downloader extends EventEmitter {
         const response = await axios.get(thumbnailURL, {
           responseType: 'stream'
         })
-        const thumbnailFileName = `${title}.jpg`
-        response.data.pipe(fs.createWriteStream(`${directory}/Thumb/${thumbnailFileName}`)) // Save thumbnail as .jpg file
+        response.data.pipe(fs.createWriteStream(filePathThumb)) // Save thumbnail as .jpg file
       } else {
         console.error(`Video format not found for ${title}`)
       }
