@@ -72,14 +72,12 @@ class Downloader extends EventEmitter {
       const formatsWithAudio720p = info.formats.filter(
         (format) => format.hasAudio && format.hasVideo && format.quality === 'hd720'
       )
-      const filePathVideo = path.join(`${directory}/Video`, `${title}.mp4`)
-      const filePathThumb = path.join(`${directory}/Thumb`, `${title}.jpg`)
-      console.log(`[debug - filePathVideo]: `, filePathVideo)
-      console.log(`[debug - filePathThumb]: `, filePathThumb)
+
+      const filePathVideo = path.join(`${directory}/Video`, `${title.replace(/[«»?|]/g, '')}.mp4`)
+      const filePathThumb = path.join(`${directory}/Thumb`, `${title.replace(/[«»?|]/g, '')}.jpg`)
       if (formatsWithAudio720p.length > 0) {
         //Download video
-        const format = formatsWithAudio720p[0]
-        const video = ytdl(videoURL, { format: format })
+        const video = ytdl(videoURL, { format: 'hd720' })
         video
           .on('error', this.handleError)
           .on(

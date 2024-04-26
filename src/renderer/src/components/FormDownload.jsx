@@ -1,4 +1,4 @@
-import { ClockCircleOutlined, LinkOutlined } from '@ant-design/icons'
+import { ClockCircleOutlined, DownloadOutlined, LinkOutlined } from '@ant-design/icons'
 import { Button, Divider, Form, Input, List, Progress, message } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 const { ipcRenderer } = window.require('electron')
@@ -12,14 +12,17 @@ const FormDownload = () => {
 
   const startDownload = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    dataMap = {}
+
     const formValues = await form.validateFields()
+
+    dataMap = {}
+    setLoading(true)
     const urls = formValues?.linkUrls?.split('\n')
     const directory = formValues.directory
     ipcRenderer.send('download', { urls, directory })
   }
   const [form] = Form.useForm()
+  const urls = Form.useWatch('linkUrls', form)
 
   useEffect(() => {
     const updateData = () => {
@@ -90,11 +93,21 @@ const FormDownload = () => {
             padding: '16px'
           }}
         >
+          <div>
+            <span style={{ color: 'black', fontSize: 20, fontWeight: 'bold' }}>
+              Số video tải (HD720):
+            </span>
+            <DownloadOutlined style={{ width: 20, height: 20, marginLeft: 10 }} />
+            <span style={{ color: '#3f8600', fontSize: 20 }}>
+              {`${data?.length} / ${urls?.split('\n')?.length || 0}`}
+            </span>
+          </div>
+
           <List
             itemLayout="horizontal"
             dataSource={data}
             style={{
-              height: 385,
+              height: 370,
               overflow: 'scroll'
             }}
             renderItem={(item) => (
