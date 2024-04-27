@@ -1,6 +1,6 @@
 import { ClockCircleOutlined, DownloadOutlined, LinkOutlined } from '@ant-design/icons'
 import { Button, Divider, Form, Input, List, Progress, message } from 'antd'
-import { compact } from 'lodash'
+import { compact, uniq } from 'lodash'
 import { useEffect, useRef, useState } from 'react'
 const { ipcRenderer } = window.require('electron')
 const { TextArea } = Input
@@ -19,7 +19,7 @@ const FormDownload = () => {
 
     dataMap = {}
     setLoading(true)
-    const urls = compact(formValues?.linkUrls?.split('\n'))
+    const urls = uniq(compact(formValues?.linkUrls?.split('\n')))
     const directory = formValues.directory
     ipcRenderer.send('download', { urls, directory })
   }
@@ -83,7 +83,6 @@ const FormDownload = () => {
         labelCol={{
           span: 3
         }}
-        disabled={loading}
         wrapperCol={{
           span: 21
         }}
@@ -100,7 +99,12 @@ const FormDownload = () => {
             </span>
             <DownloadOutlined style={{ width: 20, height: 20, marginLeft: 10 }} />
             <span style={{ color: '#3f8600', fontSize: 20 }}>
-              {`${data?.length} / ${urls?.split('\n')?.length || 0}`}
+              {`${data?.length} / ${uniq(compact(urls?.split('\n')))?.length}`}
+            </span>
+            <span style={{ color: 'black', fontSize: 14, marginLeft: 8, fontWeight: 'bold' }}>
+              {`(Tổng: ${urls?.split('\n')?.length || 0}, Trùng: ${
+                urls?.split('\n')?.length - uniq(compact(urls?.split('\n')))?.length
+              })`}
             </span>
           </div>
 
