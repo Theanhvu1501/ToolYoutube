@@ -103,7 +103,7 @@ const FormDownload = () => {
             </span>
             <span style={{ color: 'black', fontSize: 14, marginLeft: 8, fontWeight: 'bold' }}>
               {`(Tổng: ${urls?.split('\n')?.length || 0}, Trùng: ${
-                urls?.split('\n')?.length - uniq(compact(urls?.split('\n')))?.length
+                urls?.split('\n')?.length || 0 - uniq(compact(urls?.split('\n')))?.length || 0
               })`}
             </span>
           </div>
