@@ -69,15 +69,15 @@ class Downloader extends EventEmitter {
       const info = await ytdl.getInfo(videoURL)
       const { title, lengthSeconds } = info.videoDetails
       const thumbnailURL = last(info.videoDetails.thumbnails).url
-      const formatsWithAudio720p = info.formats.filter(
+      const formatsWithAudio720p = info.formats.find(
         (format) => format.hasAudio && format.hasVideo && format.quality === 'hd720'
       )
 
       const filePathVideo = path.join(`${directory}/Video`, `${title.replace(/[«»?|"']/g, '')}.mp4`)
       const filePathThumb = path.join(`${directory}/Thumb`, `${title.replace(/[«»?|"']/g, '')}.jpg`)
-      if (formatsWithAudio720p.length > 0) {
+      if (formatsWithAudio720p) {
         //Download video
-        const video = ytdl(videoURL, { format: 'hd720' })
+        const video = ytdl(videoURL, { format: formatsWithAudio720p })
         const videoFileStream = fs.createWriteStream(filePathVideo)
         await new Promise((resolve, reject) => {
           video

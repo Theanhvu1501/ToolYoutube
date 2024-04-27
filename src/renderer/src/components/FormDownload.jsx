@@ -107,12 +107,13 @@ const FormDownload = () => {
           <List
             itemLayout="horizontal"
             dataSource={data}
+            rowKey={'videoURL'}
             style={{
               height: 370,
               overflow: 'scroll'
             }}
             renderItem={(item) => (
-              <List.Item>
+              <List.Item key={item?.videoURL}>
                 <div
                   style={{
                     display: 'flex',
