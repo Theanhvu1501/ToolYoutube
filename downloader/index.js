@@ -11,7 +11,7 @@ const { throttle } = require('throttle-debounce')
 class Downloader extends EventEmitter {
   constructor() {
     super()
-    this._throttleValue = 100
+    this._throttleValue = 500
   }
 
   validateURL = (url) => {
@@ -78,24 +78,34 @@ class Downloader extends EventEmitter {
       if (formatsWithAudio720p.length > 0) {
         //Download video
         const video = ytdl(videoURL, { format: 'hd720' })
-        video
-          .on('error', this.handleError)
-          .on(
-            'progress',
-            throttle(this._throttleValue, (_, downloaded, total) =>
-              this.handleProgress(
-                _,
-                downloaded,
-                total,
-                title,
-                videoURL,
-                lengthSeconds,
-                thumbnailURL
+        const videoFileStream = fs.createWriteStream(filePathVideo)
+        await new Promise((resolve, reject) => {
+          video
+            .on('error', (error) => {
+              this.handleError(error)
+              reject(error)
+            })
+            .on(
+              'progress',
+              throttle(this._throttleValue, (_, downloaded, total) =>
+                this.handleProgress(
+                  _,
+                  downloaded,
+                  total,
+                  title,
+                  videoURL,
+                  lengthSeconds,
+                  thumbnailURL
+                )
               )
             )
-          )
-          .pipe(fs.createWriteStream(filePathVideo))
-          .on('finish', () => this.handleFinish({ title })) // Log when download is complete
+            .pipe(videoFileStream)
+            .on('finish', () => {
+              this.handleFinish({ title }) // Xử lý khi tải xong video
+              videoFileStream.close() // Đóng file stream sau khi tải xong
+              resolve()
+            })
+        })
 
         //Download thumb
 
@@ -112,7 +122,7 @@ class Downloader extends EventEmitter {
   }
 
   downloadVideos = async (urls, directory) => {
-    const dataChunk = chunk(urls, 20)
+    const dataChunk = chunk(urls, 5)
     for (const d of dataChunk) {
       await Promise.all(
         d.map((v) => {

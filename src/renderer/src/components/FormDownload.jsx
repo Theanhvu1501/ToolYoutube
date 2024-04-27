@@ -1,5 +1,6 @@
 import { ClockCircleOutlined, DownloadOutlined, LinkOutlined } from '@ant-design/icons'
 import { Button, Divider, Form, Input, List, Progress, message } from 'antd'
+import { compact } from 'lodash'
 import { useEffect, useRef, useState } from 'react'
 const { ipcRenderer } = window.require('electron')
 const { TextArea } = Input
@@ -7,17 +8,18 @@ let dataMap = {}
 window.ipcRenderer = ipcRenderer
 const FormDownload = () => {
   const [loading, setLoading] = useState(false)
+
   const [data, setData] = useState([])
   const dataRef = useRef(data)
 
   const startDownload = async (e) => {
     e.preventDefault()
-
+    setData([])
     const formValues = await form.validateFields()
 
     dataMap = {}
     setLoading(true)
-    const urls = formValues?.linkUrls?.split('\n')
+    const urls = compact(formValues?.linkUrls?.split('\n'))
     const directory = formValues.directory
     ipcRenderer.send('download', { urls, directory })
   }
@@ -60,7 +62,6 @@ const FormDownload = () => {
 
     ipcRenderer.on('download:error', (event, error) => {
       message.error(error)
-      setLoading(false)
     })
 
     return () => {
