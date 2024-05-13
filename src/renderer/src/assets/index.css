@@ -20,9 +20,14 @@
 .ant-card,
 .ant-modal-content,
 .ant-modal-header,
+.ant-select-selector,
 .ant-modal-footer {
   border-radius: 0 !important;
 }
+.ant-radio-inner, .ant-radio-inner:after{
+  border-radius: 0!important;
+}
+
 html,
 body,
 #root {

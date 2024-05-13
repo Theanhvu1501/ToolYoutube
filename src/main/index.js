@@ -3,8 +3,10 @@ import { BrowserWindow, app, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 const Downloader = require('../../downloader')
+const TiktokDownloader = require('../../downloader/tiktok')
 
 const downloader = new Downloader()
+const tiktokDownloader = new TiktokDownloader()
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -90,5 +92,24 @@ ipcMain.on('download', async (event, { urls, directory }) => {
 
   downloader.on('finish', async () => {
     event.reply('download:success')
+  })
+})
+
+ipcMain.on('downloadTiktok', async (event, { username, directory, listUrls }) => {
+  // Download file to tmp folder
+  tiktokDownloader.downloadWithUserName(username, directory, listUrls)
+
+  // // Catch and handle any errors that come back from the downloader
+  tiktokDownloader.on('error', (error) => {
+    event.reply('downloadTiktok:error', error)
+  })
+
+  // // Get download progress
+  tiktokDownloader.on('progress', (percentage) => {
+    event.reply('downloadTiktok:progress', percentage)
+  })
+
+  tiktokDownloader.on('finish', async () => {
+    event.reply('downloadTiktok:success')
   })
 })

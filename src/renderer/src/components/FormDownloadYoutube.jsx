@@ -6,7 +6,7 @@ const { ipcRenderer } = window.require('electron')
 const { TextArea } = Input
 let dataMap = {}
 window.ipcRenderer = ipcRenderer
-const FormDownload = () => {
+const FormDownloadYoutube = () => {
   const [loading, setLoading] = useState(false)
 
   const [data, setData] = useState([])
@@ -228,4 +228,4 @@ const FormDownload = () => {
   )
 }
 
-export default FormDownload
+export default FormDownloadYoutube
