@@ -14,6 +14,7 @@ let dataMap = {}
 window.ipcRenderer = ipcRenderer
 const FormDownloadTiktok = () => {
   const [loading, setLoading] = useState(false)
+  const [totalVideo, setTotalVideo] = useState(0)
 
   const [data, setData] = useState([])
   const dataRef = useRef(data)
@@ -25,9 +26,9 @@ const FormDownloadTiktok = () => {
 
     dataMap = {}
     setLoading(true)
-    const { username, directory, linkUrls } = formValues
-    const urls = uniq(compact(linkUrls?.split('\n')))
-    ipcRenderer.send('downloadTiktok', { username, directory, linkUrls: urls })
+    const { username, directory } = formValues
+    const listUrls = uniq(compact(formValues?.linkUrls?.split('\n')))
+    ipcRenderer.send('downloadTiktok', { username, directory, listUrls })
   }
   const [form] = Form.useForm()
   const urls = Form.useWatch('linkUrls', form)
@@ -41,7 +42,8 @@ const FormDownloadTiktok = () => {
 
     ipcRenderer.on(
       'downloadTiktok:progress',
-      (event, { percentage, title, videoURL, lengthSeconds }) => {
+      (event, { percentage, title, videoURL, lengthSeconds, totalVideo }) => {
+        setTotalVideo(totalVideo)
         setLoading(true)
         if (dataMap?.videoURL) {
           // Nếu đã tồn tại, cập nhật phần trăm
@@ -103,12 +105,9 @@ const FormDownloadTiktok = () => {
           <div>
             <span style={{ color: 'black', fontSize: 20, fontWeight: 'bold' }}>Số video tải :</span>
             <DownloadOutlined style={{ width: 20, height: 20, marginLeft: 10 }} />
-            <span style={{ color: '#3f8600', fontSize: 20 }}>{`${data?.length}`}</span>
-            {type === 'linkUrls' && (
-              <span style={{ color: '#3f8600', fontSize: 20 }}>
-                {` / ${uniq(compact(urls?.split('\n')))?.length}`}
-              </span>
-            )}
+            <span
+              style={{ color: '#3f8600', fontSize: 20 }}
+            >{`${data?.length} / ${totalVideo}`}</span>
             {type === 'linkUrls' && (
               <span style={{ color: 'black', fontSize: 14, marginLeft: 8, fontWeight: 'bold' }}>
                 {`(Tổng: ${urls?.split('\n')?.length || 0}, Trùng: ${
@@ -214,7 +213,7 @@ const FormDownloadTiktok = () => {
               onChange={(e) => {
                 if (e === 'linkUrls') {
                   form.setFieldsValue({
-                    useName: ''
+                    username: ''
                   })
                 } else {
                   form.setFieldsValue({

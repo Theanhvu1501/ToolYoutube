@@ -60,8 +60,8 @@ class TiktokDownloader extends EventEmitter {
     return listVideo
   }
 
-  handleProgress(percentage, title, videoURL, lengthSeconds) {
-    this.emit('progress', { percentage, title, videoURL, lengthSeconds })
+  handleProgress(percentage, title, videoURL, lengthSeconds, totalVideo) {
+    this.emit('progress', { percentage, title, videoURL, lengthSeconds, totalVideo })
   }
 
   handleError() {
@@ -76,7 +76,7 @@ class TiktokDownloader extends EventEmitter {
     }, this._throttleValue)
   }
 
-  async downloadVideo(url, directoryPath) {
+  async downloadVideo(url, directoryPath, totalVideo) {
     const { result } = await Tiktok.Downloader(url, {
       version: 'v1' //  version: "v1" | "v2" | "v3"
     })
@@ -96,7 +96,7 @@ class TiktokDownloader extends EventEmitter {
       downloadedBytes += chunk.length
       const progress = (downloadedBytes / totalBytes) * 100
       const percentage = progress.toFixed(2)
-      this.handleProgress(percentage, result?.description, url, result?.video?.duration)
+      this.handleProgress(percentage, result?.description, url, result?.video?.duration, totalVideo)
     })
 
     response.data.pipe(writer)
@@ -129,12 +129,13 @@ class TiktokDownloader extends EventEmitter {
   }
 
   async downloadListVideo(listVideo, directory) {
+    const totalVideo = listVideo.length
     // chunk data using lodash
     const chunkData = chunk(listVideo, 5)
     for (const chunk of chunkData) {
       await Promise.all(
         chunk.map(async (video) => {
-          await this.downloadVideo(video, directory)
+          await this.downloadVideo(video, directory, totalVideo)
         })
       )
     }
