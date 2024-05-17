@@ -224,7 +224,7 @@ const FormDownloadTiktok = () => {
             ></Segmented>
           </Form.Item>
 
-          <Form.Item label="User Name" name="username" initialValue={'top1keochungkhoan'}>
+          <Form.Item label="User Name" name="username" initialValue={'mf_reddit'}>
             <Input disabled={type === 'linkUrls'} placeholder="Nhập username... vd: @ng_nv1" />
           </Form.Item>
 
@@ -240,6 +240,7 @@ const FormDownloadTiktok = () => {
                 required: true
               }
             ]}
+            initialValue={'D:\\Tiktok'}
           >
             <Input />
           </Form.Item>

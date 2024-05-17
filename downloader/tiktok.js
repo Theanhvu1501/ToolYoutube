@@ -77,40 +77,52 @@ class TiktokDownloader extends EventEmitter {
   }
 
   async downloadVideo(url, directoryPath, totalVideo) {
-    const { result } = await Tiktok.Downloader(url, {
-      version: 'v1' //  version: "v1" | "v2" | "v3"
-    })
-    const fileName = `${result?.description?.replace(/[«»?|"']/g, '')?.trim()}.mp4`
-    const filePath = path.join(directoryPath, fileName)
-    const response = await axios({
-      url: last(result.video.playAddr),
-      method: 'GET',
-      responseType: 'stream'
-    })
-    const writer = fs.createWriteStream(filePath)
-
-    let downloadedBytes = 0
-    const totalBytes = parseInt(response.headers['content-length'], 10)
-
-    response.data.on('data', (chunk) => {
-      downloadedBytes += chunk.length
-      const progress = (downloadedBytes / totalBytes) * 100
-      const percentage = progress.toFixed(2)
-      this.handleProgress(percentage, result?.description, url, result?.video?.duration, totalVideo)
-    })
-
-    response.data.pipe(writer)
-    await new Promise((resolve, reject) => {
-      writer.on('finish', () => {
-        this.handleFinish({ description: result?.description })
-        writer.close()
-        resolve()
+    try {
+      const { result } = await Tiktok.Downloader(url, {
+        version: 'v3' //  version: "v1" | "v2" | "v3"
       })
-      writer.on('error', (error) => {
-        this.handleError(error)
-        reject()
+      const fileName = `${result?.desc?.replace(/[«»?|"']/g, '')?.trim()}.mp4`
+      const filePath = path.join(directoryPath, fileName)
+      const response = await axios({
+        url: result.video_hd,
+        method: 'GET',
+        responseType: 'stream'
       })
-    })
+      const writer = fs.createWriteStream(filePath)
+
+      let downloadedBytes = 0
+      const totalBytes = parseInt(response.headers['content-length'], 10)
+
+      response.data.on('data', (chunk) => {
+        downloadedBytes += chunk.length
+        const progress = (downloadedBytes / totalBytes) * 100
+        const percentage = progress.toFixed(2)
+        this.handleProgress(
+          percentage,
+          result?.description,
+          url,
+          result?.video?.duration,
+          totalVideo
+        )
+      })
+
+      response.data.pipe(writer)
+      await new Promise((resolve, reject) => {
+        writer.on('finish', () => {
+          this.handleFinish({ description: result?.description })
+          writer.close()
+          resolve()
+        })
+        writer.on('error', (error) => {
+          writer.close()
+          this.handleError(error)
+          reject()
+        })
+      })
+    } catch (error) {
+      console.log(`[debug - url]: `, url)
+      console.log(`[debug - error]: `, error)
+    }
   }
 
   async downloadWithUserName(username, directory, listUrls) {
