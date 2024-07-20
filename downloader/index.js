@@ -1,6 +1,6 @@
 'use strict'
 
-const ytdl = require('ytdl-core')
+const ytdl = require("@distube/ytdl-core");
 const fs = require('fs')
 const path = require('path')
 const { last, chunk } = require('lodash')
@@ -113,6 +113,7 @@ class Downloader extends EventEmitter {
       if (selectedFormat) {
         //Download video
         const video = ytdl(videoURL, { format: selectedFormat })
+        console.log("Video::: ",video)
         const videoFileStream = fs.createWriteStream(filePathVideo)
         await new Promise((resolve, reject) => {
           video
