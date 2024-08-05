@@ -141,8 +141,8 @@ class Downloader extends EventEmitter {
               )
               .pipe(videoFileStream)
               .on('finish', () => {
-                this.handleFinish({ title }) // Xử lý khi tải xong video
-                videoFileStream.close() // Đóng file stream sau khi tải xong
+              
+                videoFileStream.close() 
                 resolve()
               })
           }),
@@ -160,6 +160,7 @@ class Downloader extends EventEmitter {
             .on('end', () => {
               fs.unlinkSync(videoTempPath); // Remove temporary video file
               fs.unlinkSync(audioTempPath); // Remove temporary audio file
+              this.handleFinish({ title })
               resolve();
             })
             .on('error', (err) => {
@@ -182,7 +183,7 @@ class Downloader extends EventEmitter {
   }
 
   downloadVideos = async (urls, directory) => {
-    const dataChunk = chunk(urls, 5)
+    const dataChunk = chunk(urls, 1)
     for (const d of dataChunk) {
       await Promise.all(
         d.map((v) => {
