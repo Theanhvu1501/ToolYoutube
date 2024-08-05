@@ -5,9 +5,13 @@ const fs = require('fs')
 const path = require('path')
 const { last, chunk } = require('lodash')
 const { default: axios } = require('axios')
-const EventEmitter = require('events')
-// Array of YouTube video URLs
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+// Set the ffmpeg path
+ffmpeg.setFfmpegPath(ffmpegPath);
 const { throttle } = require('throttle-debounce')
+const EventEmitter = require('events')
+
 class Downloader extends EventEmitter {
   constructor() {
     super()
@@ -78,82 +82,102 @@ class Downloader extends EventEmitter {
   }
 
   downloadVideo = async (videoURL, directory) => {
-    if (!this.validateURL(videoURL)) return
+    if (!this.validateURL(videoURL)) return;
     try {
       if (!fs.existsSync(`${directory}/Video`)) {
         fs.mkdirSync(`${directory}/Video`, {
-          recursive: true
-        })
+          recursive: true,
+        });
       }
       if (!fs.existsSync(`${directory}/Thumb`)) {
         fs.mkdirSync(`${directory}/Thumb`, {
-          recursive: true
-        })
+          recursive: true,
+        });
       }
 
-      const info = await ytdl.getInfo(videoURL)
-      const { title, lengthSeconds } = info.videoDetails
-      const thumbnailURL = last(info.videoDetails.thumbnails).url
+      const info = await ytdl.getInfo(videoURL);
+      const { title, lengthSeconds } = info.videoDetails;
+      const thumbnailURL = last(info.videoDetails.thumbnails)?.url;
 
-      const formatsWithAudio720p = info.formats.find(
-        (format) => format.hasAudio && format.hasVideo && format.quality === 'hd720'
-      )
+      const videoFormat = ytdl.chooseFormat(info.formats, { quality: '136' }); // 720p video
+      const audioFormat = ytdl.chooseFormat(info.formats, { quality: '140' }); // audio
 
-      const formatsSortedByQuality = info.formats.sort(
-        (a, b) => parseInt(b.qualityLabel) - parseInt(a.qualityLabel)
-      )
-      const highestQualityFormat = formatsSortedByQuality.find(
-        (format) => format.hasAudio && format.hasVideo
-      )
+      const filePathVideo = path.join(`${directory}/Video`, `${title.replace(/[«»?!/|"']/g, '')}.mp4`);
+      const filePathThumb = path.join(`${directory}/Thumb`, `${title.replace(/[«»?!/|"']/g, '')}.jpg`);
 
-      const selectedFormat = formatsWithAudio720p || highestQualityFormat
+      if (videoFormat && audioFormat) {
+        // Create temporary paths for the separate streams
+        const videoTempPath = path.join(`${directory}/Video`, `${title.replace(/[«»?!/|"']/g, '')}_video.mp4`);
+        const audioTempPath = path.join(`${directory}/Video`, `${title.replace(/[«»?!/|"']/g, '')}_audio.mp4`);
 
-      const filePathVideo = path.join(`${directory}/Video`, `${title.replace(/[«»?|"']/g, '')}.mp4`)
-      const filePathThumb = path.join(`${directory}/Thumb`, `${title.replace(/[«»?|"']/g, '')}.jpg`)
-      if (selectedFormat) {
-        //Download video
-        const video = ytdl(videoURL, { format: selectedFormat })
-        console.log("Video::: ",video)
-        const videoFileStream = fs.createWriteStream(filePathVideo)
-        await new Promise((resolve, reject) => {
-          video
-            .on('error', (error) => {
-              this.handleError(error)
-              reject(error)
-            })
-            .on(
-              'progress',
-              throttle(this._throttleValue, (_, downloaded, total) =>
-                this.handleProgress(
-                  _,
-                  downloaded,
-                  total,
-                  title,
-                  videoURL,
-                  lengthSeconds,
-                  thumbnailURL
+        const videoFileStream = fs.createWriteStream(audioTempPath)
+        // Download video and audio separately
+        await Promise.all([
+          new Promise((resolve, reject) => {
+            ytdl(videoURL, { format: videoFormat })
+              .pipe(fs.createWriteStream(videoTempPath))
+              .on('finish', resolve)
+              .on('error', reject);
+          }),
+          new Promise((resolve, reject) => {
+            ytdl(videoURL, { format: audioFormat })
+              .on('error', (error) => {
+                this.handleError(error)
+                reject(error)
+              })
+              .on(
+                'progress',
+                throttle(this._throttleValue, (_, downloaded, total) =>
+                  this.handleProgress(
+                    _,
+                    downloaded,
+                    total,
+                    title,
+                    videoURL,
+                    lengthSeconds,
+                    thumbnailURL
+                  )
                 )
               )
-            )
-            .pipe(videoFileStream)
-            .on('finish', () => {
-              this.handleFinish({ title }) // Xử lý khi tải xong video
-              videoFileStream.close() // Đóng file stream sau khi tải xong
-              resolve()
+              .pipe(videoFileStream)
+              .on('finish', () => {
+                this.handleFinish({ title }) // Xử lý khi tải xong video
+                videoFileStream.close() // Đóng file stream sau khi tải xong
+                resolve()
+              })
+          }),
+        ]);
+
+        // Merge video and audio using ffmpeg
+        await new Promise((resolve, reject) => {
+          ffmpeg()
+            .input(videoTempPath)
+            .input(audioTempPath)
+            .outputOptions('-c:v copy')
+            .outputOptions('-c:a aac')
+            .outputOptions('-strict experimental')
+            .save(filePathVideo)
+            .on('end', () => {
+              fs.unlinkSync(videoTempPath); // Remove temporary video file
+              fs.unlinkSync(audioTempPath); // Remove temporary audio file
+              resolve();
             })
-        })
+            .on('error', (err) => {
+              console.error(`Error merging video and audio: ${err.message}`);
+              reject(err);
+            });
+        });
 
-        //Download thumb
-
+        // Download thumbnail
         const response = await axios.get(thumbnailURL, {
-          responseType: 'stream'
-        })
-        response.data.pipe(fs.createWriteStream(filePathThumb)) // Save thumbnail as .jpg file
+          responseType: 'stream',
+        });
+        response.data.pipe(fs.createWriteStream(filePathThumb)); // Save thumbnail as .jpg file
       } else {
-        console.error(`Video format not found for ${title}`)
+        console.error(`Video or audio format not found for ${title}`);
       }
     } catch (error) {
-      console.error(`Error downloading ${videoURL}: ${error}`)
+      console.error(`Error downloading ${videoURL}: ${error}`);
     }
   }
 
