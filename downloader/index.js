@@ -1,14 +1,14 @@
 'use strict'
 
-const ytdl = require("@distube/ytdl-core");
+const ytdl = require('@distube/ytdl-core')
 const fs = require('fs')
 const path = require('path')
 const { last, chunk } = require('lodash')
 const { default: axios } = require('axios')
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+const ffmpeg = require('fluent-ffmpeg')
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path
 // Set the ffmpeg path
-ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfmpegPath(ffmpegPath)
 const { throttle } = require('throttle-debounce')
 const EventEmitter = require('events')
 
@@ -81,34 +81,55 @@ class Downloader extends EventEmitter {
     return 0
   }
 
+  getHighestQualityFormat = (formats) => {
+    // Dùng ytdl.chooseFormat để chọn định dạng chất lượng cao nhất
+    const highestQualityFormat = ytdl.chooseFormat(formats, {
+      filter: (format) => format.hasVideo && !format.hasAudio // Lọc video-only
+    })
+
+    return highestQualityFormat
+  }
+
   downloadVideo = async (videoURL, directory) => {
-    if (!this.validateURL(videoURL)) return;
+    if (!this.validateURL(videoURL)) return
     try {
       if (!fs.existsSync(`${directory}/Video`)) {
         fs.mkdirSync(`${directory}/Video`, {
-          recursive: true,
-        });
+          recursive: true
+        })
       }
       if (!fs.existsSync(`${directory}/Thumb`)) {
         fs.mkdirSync(`${directory}/Thumb`, {
-          recursive: true,
-        });
+          recursive: true
+        })
       }
 
-      const info = await ytdl.getInfo(videoURL);
-      const { title, lengthSeconds } = info.videoDetails;
-      const thumbnailURL = last(info.videoDetails.thumbnails)?.url;
+      const info = await ytdl.getInfo(videoURL)
+      const { title, lengthSeconds } = info.videoDetails
+      const thumbnailURL = last(info.videoDetails.thumbnails)?.url
 
-      const videoFormat = ytdl.chooseFormat(info.formats, { quality: '136' }); // 720p video
-      const audioFormat = ytdl.chooseFormat(info.formats, { quality: '140' }); // audio
+      const videoFormat = this.getHighestQualityFormat(info.formats) // 720p video
+      const audioFormat = ytdl.chooseFormat(info.formats, { quality: '140' }) // audio
 
-      const filePathVideo = path.join(`${directory}/Video`, `${title.replace(/[«»?!/|"']/g, '')}.mp4`);
-      const filePathThumb = path.join(`${directory}/Thumb`, `${title.replace(/[«»?!/|"']/g, '')}.jpg`);
+      const filePathVideo = path.join(
+        `${directory}/Video`,
+        `${title.replace(/[«»?!/|"']/g, '')}.mp4`
+      )
+      const filePathThumb = path.join(
+        `${directory}/Thumb`,
+        `${title.replace(/[«»?!/|"']/g, '')}.jpg`
+      )
 
       if (videoFormat && audioFormat) {
         // Create temporary paths for the separate streams
-        const videoTempPath = path.join(`${directory}/Video`, `${title.replace(/[«»?!/|"']/g, '')}_video.mp4`);
-        const audioTempPath = path.join(`${directory}/Video`, `${title.replace(/[«»?!/|"']/g, '')}_audio.mp4`);
+        const videoTempPath = path.join(
+          `${directory}/Video`,
+          `${title.replace(/[«»?!/|"']/g, '')}_video.mp4`
+        )
+        const audioTempPath = path.join(
+          `${directory}/Video`,
+          `${title.replace(/[«»?!/|"']/g, '')}_audio.mp4`
+        )
 
         const videoFileStream = fs.createWriteStream(audioTempPath)
         // Download video and audio separately
@@ -117,7 +138,7 @@ class Downloader extends EventEmitter {
             ytdl(videoURL, { format: videoFormat })
               .pipe(fs.createWriteStream(videoTempPath))
               .on('finish', resolve)
-              .on('error', reject);
+              .on('error', reject)
           }),
           new Promise((resolve, reject) => {
             ytdl(videoURL, { format: audioFormat })
@@ -141,12 +162,11 @@ class Downloader extends EventEmitter {
               )
               .pipe(videoFileStream)
               .on('finish', () => {
-              
-                videoFileStream.close() 
+                videoFileStream.close()
                 resolve()
               })
-          }),
-        ]);
+          })
+        ])
 
         // Merge video and audio using ffmpeg
         await new Promise((resolve, reject) => {
@@ -158,27 +178,27 @@ class Downloader extends EventEmitter {
             .outputOptions('-strict experimental')
             .save(filePathVideo)
             .on('end', () => {
-              fs.unlinkSync(videoTempPath); // Remove temporary video file
-              fs.unlinkSync(audioTempPath); // Remove temporary audio file
+              fs.unlinkSync(videoTempPath) // Remove temporary video file
+              fs.unlinkSync(audioTempPath) // Remove temporary audio file
               this.handleFinish({ title })
-              resolve();
+              resolve()
             })
             .on('error', (err) => {
-              console.error(`Error merging video and audio: ${err.message}`);
-              reject(err);
-            });
-        });
+              console.error(`Error merging video and audio: ${err.message}`)
+              reject(err)
+            })
+        })
 
         // Download thumbnail
         const response = await axios.get(thumbnailURL, {
-          responseType: 'stream',
-        });
-        response.data.pipe(fs.createWriteStream(filePathThumb)); // Save thumbnail as .jpg file
+          responseType: 'stream'
+        })
+        response.data.pipe(fs.createWriteStream(filePathThumb)) // Save thumbnail as .jpg file
       } else {
-        console.error(`Video or audio format not found for ${title}`);
+        console.error(`Video or audio format not found for ${title}`)
       }
     } catch (error) {
-      console.error(`Error downloading ${videoURL}: ${error}`);
+      console.error(`Error downloading ${videoURL}: ${error}`)
     }
   }
 
